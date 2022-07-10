@@ -1,0 +1,3 @@
+# Required by Digital Ocean App platform
+
+-r requirements/server.txt

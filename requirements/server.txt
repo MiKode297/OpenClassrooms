@@ -1,0 +1,25 @@
+-r base.txt
+
+# gunicorn==20.1.0
+# postmarker==0.18.2
+
+# # Django
+# # ------------------------------------------------------------------------------
+# django-debug-toolbar==3.2.2  # https://github.com/jazzband/django-debug-toolbar
+
+
+# # Logs
+# --- Monitoring ---
+# # ------------------------------------------------------------------------------
+
+sentry-sdk
+# sentry-sdk==1.5.5
+
+# # File storage
+# # ------------------------------------------------------------------------------
+# django-storages[boto3]==1.12.3
+
+
+# --- Automation ---
+
+django-crontab

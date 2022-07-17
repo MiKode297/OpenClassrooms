@@ -2,7 +2,7 @@ from django.apps import AppConfig
 from django.utils.translation import gettext_lazy as _
 
 
-class ClassroomsConfig(AppConfig):
+class SnippetsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "appz.classrooms"
-    verbose_name = _("Classrooms")
+    name = "appz.snippets"
+    verbose_name = _("Snippets")

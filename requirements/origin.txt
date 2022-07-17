@@ -1,6 +1,7 @@
 # --- Libs ---
 
 # requests
+httpie
 # pillow
 # pygraphviz
 # pyparsing
@@ -10,7 +11,7 @@
 # PyYAML
 # uritemplate
 # Markdown
-# Pygments
+Pygments
 
 # jupyter
 

@@ -309,5 +309,5 @@ zenvar*.py
 # /media/
 # /annonimized_dump.json
 
-# /outputs/
+/outputs/
 # /tests/smartdocs/rsc/temp_*

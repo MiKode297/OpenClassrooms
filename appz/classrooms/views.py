@@ -3,13 +3,22 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseRedirect, JsonResponse
+from django.http import (
+    HttpResponse,
+    HttpResponseBadRequest,
+    HttpResponseRedirect,
+    JsonResponse,
+)
 from django.urls import reverse
 
 
 from rest_framework import viewsets, status, permissions
 from rest_framework.authtoken.models import Token
-from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
+from rest_framework.authentication import (
+    SessionAuthentication,
+    BasicAuthentication,
+    TokenAuthentication,
+)
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 
@@ -35,9 +44,9 @@ def index(request):
 def signin(request):
 
     response = HttpResponseBadRequest()
-    username = request.POST['username']
-    email = request.POST['email']
-    password = request.POST['password']
+    username = request.POST["username"]
+    email = request.POST["email"]
+    password = request.POST["password"]
     user = authenticate(request, username=username, password=password)
     if user is not None:
 

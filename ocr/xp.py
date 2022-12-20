@@ -1,6 +1,9 @@
+"""Main OpenClassRooms scrapping."""
+
 import os
 import sys
-from pathlib import Path
+
+# from pathlib import Path
 from pprint import pprint
 
 import logging
@@ -10,7 +13,8 @@ import matplotlib.pyplot as plt
 
 from selenium.webdriver.firefox.webdriver import WebDriver
 
-import ocr
+from ocr import OpenClassrooms
+from . import ocr
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -18,8 +22,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 sys.path.append(BASE_DIR)
 
-from settings import zenvar
-from zutils import zmongodb as db_client
+# from project.settings import zenvar
+# from zutils import zmongodb as db_client
 
 
 # Get an instance of a logger
@@ -38,6 +42,7 @@ logger.addHandler(ch)
 
 
 def show_menu():
+    """Show menu."""
 
     print("Choices:")
     print("Operations:")
@@ -103,32 +108,21 @@ def update_content():
                 {"$set": content_dct, "$currentDate": {"lastModified": True}},
             )
             update_res_s = (
-                "{}. Update: {}, {} {}, Found: {}, Updated: {}, Raw: {}, U: {}".format(
-                    content_idx,
-                    update_res.acknowledged,
-                    content_dct["identifier"],
-                    content_dct["label"],
-                    update_res.matched_count,
-                    update_res.modified_count,
-                    update_res.raw_result,
-                    update_res.upserted_id,
-                )
+                f"{content_idx}. Update: {update_res.acknowledged}, "
+                f'{content_dct["identifier"]} {content_dct["label"]}, '
+                f"Found: {update_res.matched_count}, "
+                f"Updated: {update_res.modified_count}, Raw: {update_res.raw_result}, "
+                f"U: {update_res.upserted_id}"
             )
 
             if update_res.matched_count > 1:
-                logger.error("Duplicated document: {}".format(update_res_s))
+                logger.error(f"Duplicated document: {update_res_s}")
             if update_res.matched_count == 1:
                 logger.debug(update_res_s)
             else:
                 insert_res = db.inventory.insert_one(content_dct)
                 logger.debug(
-                    "{}. Insert: {}, {} - {} {}".format(
-                        content_idx,
-                        insert_res.acknowledged,
-                        insert_res.inserted_id,
-                        content_dct["identifier"],
-                        content_dct["label"],
-                    )
+                    f"""{content_idx}. Insert: {insert_res.acknowledged}, {insert_res.inserted_id} - {content_dct['identifier']} {content_dct['label']}"""
                 )
 
 
@@ -463,12 +457,79 @@ def __get_db():
 
 if __name__ == "__main__":
 
-    answer = ""
+    import time
 
-    while answer != "q":
-        show_menu()
-        answer = input(
-            "Tapez entrée pour connaître une autre citation ou B pour quitter le programme:\n"
+    from selenium import webdriver
+    from selenium.webdriver.firefox.service import Service as FirefoxService
+    from webdriver_manager.firefox import GeckoDriverManager
+
+    from selenium.webdriver.support.wait import WebDriverWait
+    from selenium.webdriver.common.by import By
+
+    TIMEOUT = 7
+
+    # driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
+    driver = webdriver.Firefox()
+
+    ocr_obj = OpenClassrooms()
+    driver.get(ocr_obj.base_url)
+    title = driver.title
+    print(title)
+    driver.implicitly_wait(12)
+
+    page_idx = 1
+    n_post = 1
+    flag = True
+    while flag:
+        # =============================
+
+        search_url = f"{ocr_obj.base_url}/{ocr_obj.SEARCH_URI}{page_idx}"
+        driver.get(search_url)
+
+        ul_el = WebDriverWait(driver, timeout=TIMEOUT).until(
+            lambda d: d.find_element(
+                By.XPATH,
+                "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]",
+            )
         )
-        answer = answer.lower()
-        execute_operation(answer)
+
+        print("list:", ul_el)
+        print("list:", ul_el.text)
+        print("list:", ul_el.get_attribute("href"))
+
+        posts = ul_el.find_elements(
+            By.XPATH,
+            "./div",
+        )
+
+        if not posts:
+            flag = False
+
+        for idx, post in enumerate(posts):
+            print(f"Idx: {n_post}, p{page_idx}.{idx+1}")
+            print("post:", post)
+            print("text:", post.text)
+            print("href", post.get_attribute("href"))
+            n_post += 1
+
+        page_idx += 1
+
+    # =============================
+
+    # text_box = driver.find_element(by=By.NAME, value="my-text")
+    # submit_button = driver.find_element(by=By.CSS_SELECTOR, value="button")
+
+    # text_box.send_keys("Selenium")
+    # submit_button.click()
+
+    # value = message.text
+
+    driver.quit()
+
+    # answer = ""
+
+    # while answer != "q":
+    #     show_menu()
+    #     answer = input("Select an operation or type Q to quit:\n")
+    #     answer = answer.lower()
+    #     execute_operation(answer)

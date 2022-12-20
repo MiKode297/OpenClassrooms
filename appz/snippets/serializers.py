@@ -3,18 +3,21 @@ from appz.snippets.models import Snippet, LANGUAGE_CHOICES, STYLE_CHOICES
 
 from django.contrib.auth.models import User
 
+
 class UserSerializer(serializers.ModelSerializer):
-    snippets = serializers.PrimaryKeyRelatedField(many=True, queryset=Snippet.objects.all())
+    snippets = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Snippet.objects.all()
+    )
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'snippets']
+        fields = ["id", "username", "snippets"]
 
 
 class SnippetSerializer(serializers.ModelSerializer):
 
     # my_title = serializers.CharField(required=False, allow_blank=True, max_length=100, default="My Dummy Title")
-    owner = serializers.ReadOnlyField(source='owner.username')
+    owner = serializers.ReadOnlyField(source="owner.username")
 
     class Meta:
         model = Snippet

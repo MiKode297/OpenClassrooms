@@ -31,6 +31,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/", include(router.urls)),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-    path('ocr/', include('appz.classrooms.urls')),
+    path("ocr/", include("appz.classrooms.urls")),
     path("snippets/", include("appz.snippets.urls")),
 ]

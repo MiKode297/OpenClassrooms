@@ -1,0 +1,72 @@
+# --- Libs ---
+
+# requests
+httpie
+# pillow
+# pygraphviz
+# pyparsing
+# pydot
+# pydotplus
+networkx
+
+# PyYAML
+# uritemplate
+# Markdown
+Pygments
+
+beautifulsoup4
+selenium
+webdriver-manager
+fake_useragent
+
+# jupyter
+
+# --- Science ---
+# scipy
+# numpy
+matplotlib
+# pandas
+
+
+# --- Framework ---
+
+# pyqt5
+
+
+## -- Web --
+
+# Flask
+# flask_sqlalchemy
+# Flask-Testing
+
+django
+djangorestframework
+# django-debug-toolbar
+# django-extensions
+# django-filter
+# django-guardian
+# dj-database-url
+
+### - Config -
+# configparser
+
+### - Static file -
+# whitenoise
+
+
+# --- Server ---
+
+# gunicorn
+
+
+# --- Database ---
+
+# psycopg2
+# mysql-connector-python		# do not use mysql-connector
+# influxdb-client[ciso]
+# influxdb-client
+# influxdb
+
+
+
+

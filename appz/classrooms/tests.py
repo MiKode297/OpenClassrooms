@@ -19,42 +19,35 @@ logger = logging.getLogger(__name__)
 
 
 class TestUserSign(TestCase):
-
     def setUp(self):
         self.client = Client()
 
     def tearDown(self):
         pass
 
-
     # [TODO](mtt) check assignment with 2 different partners
     def test_api_user_signin(self):
 
         response = self.client.get(reverse("index"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/?next=",
-            response.url
-        )
+        self.assertIn("/accounts/login/?next=", response.url)
 
         response = self.client.get(reverse("api_index"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/?next=",
-            response.url
-        )
+        self.assertIn("/accounts/login/?next=", response.url)
 
         username = "user01"
         email = "user01@domain.com"
         password = "$user01_pwd$"
 
-        user = User.objects.create_user(username=username,
-            email=email, password=password
+        user = User.objects.create_user(
+            username=username, email=email, password=password
         )
         # user.first_name = first_name
         # user.last_name = last_name
         user.save()
         logger.warning(f"THE user: {user}")
         print(f"THE user: {user}")
-
 
         # headers = {"HTTP_Authorization": settings.TEST_NEW_SMARTDOCS_API_KEY}
         data = {"username": username, "email": email, "password": password}
@@ -94,9 +87,7 @@ class TestUserSign(TestCase):
 
         response = self.client.get(reverse("index"))
         self.assertEqual(response.status_code, 302)
-        self.assertIn("/accounts/login/?next=",
-            response.url
-        )
+        self.assertIn("/accounts/login/?next=", response.url)
 
         headers = {"HTTP_Authorization": f"Token {content_dct['token']}"}
         logger.warning(headers)

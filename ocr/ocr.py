@@ -141,7 +141,6 @@ def import_source_data():
         # n_page = 120
         enable = True
         while enable:
-            # for page_idx in range(1, n_page + 1):
 
             # url_cur = BASE_URL + "/" + SEARCH_URL + str(page_idx)
             url_cur = __build_url(uri=SEARCH_URL + str(page_idx))
@@ -160,9 +159,6 @@ def import_source_data():
                 div = WebDriverWait(driver, timeout=TIMEOUT).until(
                     lambda d: d.find_element_by_id("mainSearchLegacy")
                 )
-                # ul_el = WebDriverWait(div, timeout=TIMEOUT).until(lambda d: d.find_element_by_css_selector('.members-holder ul li.invitation-holder'))
-                # ul_el = WebDriverWait(div, timeout=TIMEOUT).until(lambda d: d.find_element_by_xpath("//div[@class='grid-wrapper']"))
-                # ul_el = WebDriverWait(div, timeout=TIMEOUT).until(lambda d: d.find_element_by_xpath("/div[1]"))
                 ul_el = WebDriverWait(driver, timeout=TIMEOUT).until(
                     lambda d: d.find_element_by_xpath(
                         "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]"

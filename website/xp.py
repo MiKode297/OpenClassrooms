@@ -13,8 +13,8 @@ import matplotlib.pyplot as plt
 
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.common.exceptions import NoSuchElementException
-from ocr import OpenClassrooms
-from . import ocr
+
+from .ocr import OpenClassrooms
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 # BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -78,7 +78,10 @@ def execute_operation(operation_id):
 
 def update_content():
 
-    content_lst = ocr.import_source_data()
+    ocr_obj = OpenClassrooms()
+    ocr_obj.get_posts(page_start_idx=4, n_page_max=0)
+    content_lst = ocr_obj.post_lst
+
     if content_lst:
 
         # logger.debug(content_lst)
@@ -457,128 +460,23 @@ def __get_db():
 
 if __name__ == "__main__":
 
-    import time
-
-    from selenium import webdriver
-    from selenium.webdriver.firefox.service import Service as FirefoxService
-    from webdriver_manager.firefox import GeckoDriverManager
-
-    from selenium.webdriver.support.wait import WebDriverWait
-    from selenium.webdriver.common.by import By
-
-    TIMEOUT = 7
-
-    # driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
-    driver = webdriver.Firefox()
-
     ocr_obj = OpenClassrooms()
-    driver.get(ocr_obj.base_url)
-    title = driver.title
-    print(title)
-    driver.implicitly_wait(12)
+    ocr_obj.get_posts(page_start_idx=4, n_page_max=0)
 
-    page_idx = 1
-    n_post = 1
-    enable = True
-    while enable:
+    # # =============================
 
-        search_url = f"{ocr_obj.base_url}/{ocr_obj.SEARCH_URI}{page_idx}"
-        driver.get(search_url)
+    # # text_box = driver.find_element(by=By.NAME, value="my-text")
+    # # submit_button = driver.find_element(by=By.CSS_SELECTOR, value="button")
 
-        ul_el = WebDriverWait(driver, timeout=TIMEOUT).until(
-            lambda d: d.find_element(
-                By.XPATH,
-                "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]",
-            )
-        )
+    # # text_box.send_keys("Selenium")
+    # # submit_button.click()
 
-        post_lst = ul_el.find_elements(
-            By.XPATH,
-            ".//child::li",
-        )
+    # # value = message.text
 
-        for idx, post in enumerate(post_lst):
-            print(f"Idx: {n_post}, p{page_idx}.{idx+1}")
-            print("post:", post)
+    # # answer = ""
 
-            link = None
-            try:
-                link = post.find_element(By.TAG_NAME, "a")
-            except NoSuchElementException:
-                pass
-
-            if link:
-
-                url = link.get_attribute("href")
-                element_lst = url.split("/")
-                content_type = element_lst[-2]
-                content = element_lst[-1].split("-", 1)
-                content_id = content[0]
-                content_label = content[1]
-                print(
-                    f"Content URL: {url}, Type: {content_type}, ID: {content_id}, label: {content_label}"
-                )
-
-                # block_type = link.find_element_by_xpath('//self::div[1]')
-                div_cur = link.find_element(By.XPATH, "./div")
-                # print('First div', div_cur.get_attribute('class'))
-
-                figure = div_cur.find_element(By.TAG_NAME, "figure")
-                figure_url = figure.get_attribute("style")
-                print("Figure URL", figure_url)
-
-                # block_type = div_cur.find_element_by_xpath('//span[contains(@class, MuiTypography-root)]')
-                block_type = div_cur.find_element(By.XPATH, "./div/span")
-                content_type_lst = block_type.text.split(" - ")
-                content_category = content_type_lst[0].lower()
-                logger.debug("Category: {}".format(content_category))
-
-                title = div_cur.find_element(By.XPATH, "./div/h6")
-                content_title = title.text
-                print("Title", content_title)
-
-                if content_type == "paths":
-                    desc = div_cur.find_element(By.XPATH, "./div/div[2]")
-                    content_description = desc.text
-                    print("Description", content_description)
-
-                # content_lst.append(
-                #     {
-                #         "url": url,
-                #         "type": content_type,
-                #         "category": content_category,
-                #         "identifier": content_id,
-                #         "label": content_label,
-                #         "title": content_title,
-                #         "description": content_description,
-                #         # "figure_url": figure_url,
-                #     }
-                # )
-
-            n_post += 1
-
-        if not post_lst:
-            enable = False
-
-        page_idx += 1
-        # enable = False
-
-    # =============================
-
-    # text_box = driver.find_element(by=By.NAME, value="my-text")
-    # submit_button = driver.find_element(by=By.CSS_SELECTOR, value="button")
-
-    # text_box.send_keys("Selenium")
-    # submit_button.click()
-
-    # value = message.text
-
-    driver.quit()
-
-    # answer = ""
-
-    # while answer != "q":
-    #     show_menu()
-    #     answer = input("Select an operation or type Q to quit:\n")
-    #     answer = answer.lower()
-    #     execute_operation(answer)
+    # # while answer != "q":
+    # #     show_menu()
+    # #     answer = input("Select an operation or type Q to quit:\n")
+    # #     answer = answer.lower()
+    # #     execute_operation(answer)

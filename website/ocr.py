@@ -1,14 +1,16 @@
+"""Module."""
+
 import os
 import sys
+from enum import Enum, auto
+from typing import Optional
+
 import logging
 from datetime import date, datetime
 
-# import time
 # import unittest
 # import pytest
 from pathlib import Path
-
-import json
 
 import requests
 
@@ -17,44 +19,48 @@ from urllib.parse import urljoin
 from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
 
-# from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium import webdriver
 from selenium.webdriver.firefox.webdriver import WebDriver
 
+# from selenium.webdriver.firefox.service import Service as FirefoxService
+# from selenium.webdriver.chrome.webdriver import WebDriver
+# from selenium.webdriver.chrome.options import Options
+
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.chrome.options import Options
+
+# from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.expected_conditions import presence_of_element_located
 
-from selenium.common.exceptions import TimeoutException
+# from selenium.webdriver.support.wait import WebDriverWait
+# from selenium.webdriver.support import expected_conditions as EC
+# from selenium.webdriver.support.expected_conditions import presence_of_element_located
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
+
+from . import Website
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 sys.path.append(BASE_DIR)
 
 
-# Get an instance of a logger
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+# # Get an instance of a logger
+# logger = logging.getLogger(__name__)
+# logger.setLevel(logging.DEBUG)
 
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
 
-# create formatter
-formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(name)s - %(message)s")
-# add formatter to ch
-ch.setFormatter(formatter)
+# # create formatter
+# formatter = logging.Formatter("%(levelname)s - %(asctime)s - %(name)s - %(message)s")
+# # add formatter to ch
+# ch.setFormatter(formatter)
 
-logger.addHandler(ch)
+# logger.addHandler(ch)
 
 
-BASE_URL = "https://openclassrooms.com"
 LOCAL_FR = "fr"
 LOCAL_EN = "en"
-SEARCH_URL = "search?page="
-DEFAULT_TIMEOUT_S = 23
 SEARCH_TIMEOUT_S = 7
 DISABLE_TEST = True
 
@@ -79,184 +85,181 @@ DISABLE_TEST = True
 #     return browser
 
 
-def import_source_data():
+class OpenClassrooms(Website):
+    """Self-explanatory"""
 
-    content_lst = []
+    URL_BASE = "https://openclassrooms.com"
+    SEARCH_URI = "fr/search?page="
 
-    # with webdriver.Chrome(executable_path=os.path.join(BASE_DIR, 'chromedriver.exe')) as driver:
-    with WebDriver() as driver:
+    TIMEOUT_DEFAULT_S = 12
 
-        TIMEOUT = 7
+    def __init__(self, base_url: str = URL_BASE) -> None:
 
-        url_cur = BASE_URL
-        logger.debug("update data for url {}".format(url_cur))
+        super().__init__(base_url)
+        self.post_lst = []
+        self.driver = None
+        self.title = ""
 
-        driver.get(url_cur)
-        handle = driver.current_window_handle
-        logger.debug(
-            "Handle: {}, Title: {}, URL: {}".format(
-                handle, driver.title, driver.current_url
-            )
-        )
+    def get_posts(self, page_start_idx: int = 0, n_page_max: int = 0) -> None:
+        """
+        Get all website articles/posts.
 
-        # Go to Trust iframe
-        # popup = WebDriverWait(driver, timeout=TIMEOUT).until(lambda d: d.find_element_by_xpath("//div[starts-with(@id,'pop-div')]"))
-        popup_div = WebDriverWait(driver, timeout=TIMEOUT).until(
-            lambda d: d.find_element_by_class_name("truste_box_overlay_inner")
-        )
+        Args:
+            page_start_idx: . Defaults to 0.
+            n_page_max: . Defaults to 0.
+        """
+        # Init. webdriver
+        # driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
+        driver = webdriver.Firefox()
+        driver.implicitly_wait(self.TIMEOUT_DEFAULT_S)
 
-        frame = popup_div.find_element_by_tag_name("iframe")
-        frame_id = frame.get_attribute("id")
-        # driver.switch_to.frame(frame_id)
-        driver.switch_to.frame(frame)
+        driver.get(self.base_url)
+        self.title = driver.title
+        print(self.title)
 
-        handle = driver.current_window_handle
-        print(driver.title, handle)
+        if page_start_idx < 0:
+            page_start_idx = 0
 
-        # Click on accept
-        # popup = WebDriverWait(driver, timeout=TIMEOUT).until(lambda d: d.find_element_by_class_name("pdynamicbutton"))
-        div = WebDriverWait(driver, timeout=TIMEOUT).until(
-            lambda d: d.find_element_by_class_name("pdynamicbutton")
-        )
-        el = div.find_element_by_class_name("call")
-        el.click()
-        print("Click")
-
-        # Go back to default window
-        handle = driver.current_window_handle
-        print(driver.title, handle)
-
-        # driver.switch_to.window(handle)
-        driver.switch_to.default_content()
-
-        driver.refresh()
-        handle = driver.current_window_handle
-        print(driver.title, handle)
-
-        handle = driver.current_window_handle
-        print(driver.title, handle)
-
-        course_idx = 1
-        page_idx = 1
-        # n_page = 120
+        page_idx = page_start_idx
+        post_idx = 1
         enable = True
+
         while enable:
 
-            # url_cur = BASE_URL + "/" + SEARCH_URL + str(page_idx)
-            url_cur = __build_url(uri=SEARCH_URL + str(page_idx))
-            logger.debug("update data for url {}".format(url_cur))
+            # Get posts from page
+            # url_cur = __build_url(uri=SEARCH_URL + str(page_idx))
+            search_url = f"{self.base_url}/{self.SEARCH_URI}{page_idx}"
 
-            driver.get(url_cur)
-            handle = driver.current_window_handle
-            logger.debug(
-                "Handle: {}, Title: {}, URL: {}".format(
-                    handle, driver.title, driver.current_url
+            driver.get(search_url)
+            # handle = driver.current_window_handle
+            # print(f"Handle: {handle}, Title: {driver.title}, URL: {driver.current_url}")
+
+            ul_el = WebDriverWait(driver, timeout=self.TIMEOUT_DEFAULT_S).until(
+                lambda d: d.find_element(
+                    By.XPATH,
+                    "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]",
                 )
             )
 
-            try:
-                # Get list of paths / courses
-                div = WebDriverWait(driver, timeout=TIMEOUT).until(
-                    lambda d: d.find_element_by_id("mainSearchLegacy")
-                )
-                ul_el = WebDriverWait(driver, timeout=TIMEOUT).until(
-                    lambda d: d.find_element_by_xpath(
-                        "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]"
+            post_lst = ul_el.find_elements(
+                By.XPATH,
+                ".//child::li",
+            )
+
+            # Get list of paths / courses
+            for idx, post in enumerate(post_lst):
+                print(f"Idx: {post_idx}, p{page_idx}.{idx+1}")
+                print("post:", post)
+
+                link = None
+                try:
+                    link = post.find_element(By.TAG_NAME, "a")
+                except NoSuchElementException:
+                    pass
+
+                # Get post details
+                if link:
+
+                    url = link.get_attribute("href")
+                    element_lst = url.split("/")
+                    content_type = element_lst[-2]
+                    content = element_lst[-1].split("-", 1)
+                    content_id = content[0]
+                    content_label = content[1]
+                    print(
+                        f"Content URL: {url}, Type: {content_type}, ID: {content_id}, label: {content_label}"
                     )
-                )
-                # ul_el = WebDriverWait(div, timeout=TIMEOUT).until(lambda d: d.find_elements_by_class_name("jss361"))
-                # ul_el = WebDriverWait(div, timeout=TIMEOUT).until(lambda d: d.find_element_by_tag_name("div"))
-                # ul_el = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_element_by_tag_name("div"))
-                # print(ul_el.get_attribute('class'))
-                # ul_el = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_element_by_tag_name("div"))
-                # print(ul_el.get_attribute('class'))
-                # ul_el = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_element_by_tag_name("ul"))
-                # print('ul', ul_el.get_attribute('class'))
-                # block_lst = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_elements_by_tag_name('a'))
-                # print(block_lst.get_attribute('class'))
-                # block_lst = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_elements_by_class_name("MuiPaper-root MuiPaper-elevation1 MuiCard-root jss362 jss431 MuiPaper-rounded"))
-                # block_lst = WebDriverWait(ul_el, timeout=TIMEOUT).until(lambda d: d.find_element_by_xpath("/div[1]"))
-                block_lst = WebDriverWait(driver, timeout=TIMEOUT).until(
-                    lambda d: d.find_elements_by_xpath(
-                        "//div[@id='mainSearchLegacy']/div[1]/div[1]/div[1]/ul[1]//child::li"
-                    )
-                )
 
-            except TimeoutException as e:
-                enable = False
-                logger.warning("End of scan; Timeout Exception: {}".format(e))
+                #             # block_type = link.find_element_by_xpath('//self::div[1]')
+                #             div_cur = link.find_element(By.XPATH, "./div")
+                #             # print('First div', div_cur.get_attribute('class'))
 
-            else:
+                #             figure = div_cur.find_element(By.TAG_NAME, "figure")
+                #             figure_url = figure.get_attribute("style")
+                #             print("Figure URL", figure_url)
 
-                for idx, item in enumerate(block_lst):
+                #             # block_type = div_cur.find_element_by_xpath('//span[contains(@class, MuiTypography-root)]')
+                #             block_type = div_cur.find_element(By.XPATH, "./div/span")
+                #             content_type_lst = block_type.text.split(" - ")
+                #             content_category = content_type_lst[0].lower()
+                #             logger.debug("Category: {}".format(content_category))
 
-                    is_available = True
-                    try:
-                        link = item.find_element_by_tag_name("a")
-                        url = link.get_attribute("href")
-                        element_lst = url.split("/")
-                        content_type = element_lst[-2][:-1]
-                        content_uri = element_lst[-1]
-                        logger.debug("Content URI: {}".format(content_uri))
-                        content_id = content_uri.split("-")[0]
-                        content_label = content_uri.replace(content_id + "-", "")
-                        logger.debug(
-                            "Content URL: {}, Type: {}, ID: {}, label: {}".format(
-                                url,
-                                content_type,
-                                content_id,
-                                content_label,
-                            )
-                        )
-                    except:
-                        is_available = False
+                #             title = div_cur.find_element(By.XPATH, "./div/h6")
+                #             content_title = title.text
+                #             print("Title", content_title)
 
-                    if is_available:
+                #             if content_type == "paths":
+                #                 desc = div_cur.find_element(By.XPATH, "./div/div[2]")
+                #                 content_description = desc.text
+                #                 print("Description", content_description)
 
-                        print("Course:", page_idx, "-", idx, course_idx)
-                        # block_type = link.find_element_by_xpath('//self::div[1]')
-                        div_cur = link.find_element_by_xpath("./div")
-                        # print('First div', div_cur.get_attribute('class'))
+                #             # content_lst.append(
+                #             #     {
+                #             #         "url": url,
+                #             #         "type": content_type,
+                #             #         "category": content_category,
+                #             #         "identifier": content_id,
+                #             #         "label": content_label,
+                #             #         "title": content_title,
+                #             #         "description": content_description,
+                #             #         # "figure_url": figure_url,
+                #             #     }
+                #             # )
 
-                        figure = div_cur.find_element_by_tag_name("figure")
-                        figure_url = figure.get_attribute("style")
-                        print("Figure URL", figure_url)
-
-                        # block_type = div_cur.find_element_by_xpath('//span[contains(@class, MuiTypography-root)]')
-                        block_type = div_cur.find_element_by_xpath("./div/span")
-                        content_type_lst = block_type.text.split(" - ")
-                        content_category = content_type_lst[0].lower()
-                        logger.debug("Category: {}".format(content_category))
-
-                        title = div_cur.find_element_by_xpath("./div/h6")
-                        content_title = title.text
-                        print("Title", content_title)
-
-                        desc = div_cur.find_element_by_xpath("./div/div[2]")
-                        content_description = desc.text
-                        print("Description", content_description)
-
-                        content_lst.append(
-                            {
-                                "url": url,
-                                "type": content_type,
-                                "category": content_category,
-                                "identifier": content_id,
-                                "label": content_label,
-                                "title": content_title,
-                                "description": content_description,
-                                # "figure_url": figure_url,
-                            }
-                        )
-
-                    else:
-                        print("Course Not Available:", page_idx, "-", idx, course_idx)
-
-                    course_idx += 1
+                self.post_lst.append((content_type, content_id, content_label))
+                post_idx += 1
 
             page_idx += 1
 
-    return content_lst
+            # check page empty or max page reached
+            if not post_lst or (
+                n_page_max > 0 and (page_idx - page_start_idx) >= n_page_max
+            ):
+                enable = False
+
+        driver.quit()
+
+
+class WebsitePost(Website):
+    """Web site post."""
+
+    class PostType(Enum):
+        """Self-explanatory"""
+
+        COURSE = auto()
+        PATH = auto()
+
+    def __init__(self, uri: str = "", parent: Optional[OpenClassrooms] = None) -> None:
+
+        super().__init__()
+
+        self.parent = parent
+        self.uri = uri
+        self.identifier = ""
+        self.type = None
+        self.theme = ""
+        self.title = ""
+        self.level = ""
+        self.period = ""
+        self.period_unit = ""
+        self.description = ""
+        self.category = ""
+
+
+class Path(WebsitePost):
+    """Web site post."""
+
+    def __init__(self, base_url: str = "") -> None:
+        super().__init__(base_url)
+        self.website = base_url
+
+
+class Course(WebsitePost):
+    """Web site post."""
+
+    def __init__(self, base_url: str = "") -> None:
+        super().__init__(base_url)
+        self.website = base_url
 
 
 def import_source_content_dependency(driver, content_url):

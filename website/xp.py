@@ -461,7 +461,9 @@ def __get_db():
 if __name__ == "__main__":
 
     ocr_obj = OpenClassrooms()
-    ocr_obj.get_posts(page_start_idx=4, n_page_max=0)
+
+    ocr_obj.get_posts(page_start_idx=4, n_page_max=2)
+    ocr_obj.update_posts()
 
     # # =============================
 

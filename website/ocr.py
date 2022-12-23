@@ -61,7 +61,6 @@ sys.path.append(BASE_DIR)
 
 LOCAL_FR = "fr"
 LOCAL_EN = "en"
-SEARCH_TIMEOUT_S = 7
 DISABLE_TEST = True
 
 
@@ -98,7 +97,23 @@ class OpenClassrooms(Website):
         super().__init__(base_url)
         self.post_lst = []
         self.driver = None
-        self.title = ""
+
+    def __del__(self) -> None:
+
+        if self.driver:
+            self.driver.quit()
+
+        self.driver = None
+
+    @property
+    def title(self):
+        """Self-explanatory"""
+
+        driver = self._open_driver()
+        driver.get(self.base_url)
+        title = driver.title
+        self._close_driver(driver)
+        return title
 
     def get_posts(self, page_start_idx: int = 0, n_page_max: int = 0) -> None:
         """
@@ -109,12 +124,9 @@ class OpenClassrooms(Website):
             n_page_max: . Defaults to 0.
         """
         # Init. webdriver
-        # driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
-        driver = webdriver.Firefox()
-        driver.implicitly_wait(self.TIMEOUT_DEFAULT_S)
+        driver = self._open_driver()
 
         driver.get(self.base_url)
-        self.title = driver.title
         print(self.title)
 
         if page_start_idx < 0:
@@ -162,7 +174,7 @@ class OpenClassrooms(Website):
 
                     url = link.get_attribute("href")
                     element_lst = url.split("/")
-                    content_type = element_lst[-2]
+                    content_type = element_lst[-2][:-1].upper()
                     content = element_lst[-1].split("-", 1)
                     content_id = content[0]
                     content_label = content[1]
@@ -193,20 +205,24 @@ class OpenClassrooms(Website):
                 #                 content_description = desc.text
                 #                 print("Description", content_description)
 
-                #             # content_lst.append(
-                #             #     {
-                #             #         "url": url,
-                #             #         "type": content_type,
-                #             #         "category": content_category,
-                #             #         "identifier": content_id,
-                #             #         "label": content_label,
-                #             #         "title": content_title,
-                #             #         "description": content_description,
-                #             #         # "figure_url": figure_url,
-                #             #     }
-                #             # )
+                data_dct = {
+                    "url": url,
+                    "identifier": content_id,
+                    "label": content_label,
+                }
 
-                self.post_lst.append((content_type, content_id, content_label))
+                if content_type == WebsitePost.PostType.PATH.name:
+                    post = ProfessionalPath(
+                        self,
+                        **data_dct,
+                    )
+
+                elif content_type == WebsitePost.PostType.COURSE.name:
+                    post = Course(
+                        self,
+                        **data_dct,
+                    )
+                self.post_lst.append(post)
                 post_idx += 1
 
             page_idx += 1
@@ -217,10 +233,28 @@ class OpenClassrooms(Website):
             ):
                 enable = False
 
+        self._close_driver(driver)
+
+    def update_posts(self):
+
+        for post in self.post_lst:
+            print(
+                f"post: {post.parent}, {post.type}, {post.identifier}, {post.label}, {post.title}, {post.url}"
+            )
+            post.update()
+
+    def _open_driver(self):
+        # driver = webdriver.Firefox(service=FirefoxService(GeckoDriverManager().install()))
+        driver = webdriver.Firefox()
+        driver.implicitly_wait(self.TIMEOUT_DEFAULT_S)
+        return driver
+
+    def _close_driver(self, driver):
         driver.quit()
+        driver = None
 
 
-class WebsitePost(Website):
+class WebsitePost:
     """Web site post."""
 
     class PostType(Enum):
@@ -229,80 +263,77 @@ class WebsitePost(Website):
         COURSE = auto()
         PATH = auto()
 
-    def __init__(self, uri: str = "", parent: Optional[OpenClassrooms] = None) -> None:
+    def __init__(self, parent: Optional[OpenClassrooms] = None, **kwargs) -> None:
 
         super().__init__()
 
         self.parent = parent
-        self.uri = uri
-        self.identifier = ""
+        self.url = kwargs.get("url", "")
+        self.identifier = kwargs.get("identifier", "")
+        self.label = kwargs.get("label", "")
         self.type = None
-        self.theme = ""
-        self.title = ""
-        self.level = ""
-        self.period = ""
-        self.period_unit = ""
-        self.description = ""
-        self.category = ""
+        self.theme = kwargs.get("theme", "")
+        self.title = kwargs.get("title", "")
+        self.level = kwargs.get("level", "")
+        self.period = kwargs.get("period", "")
+        self.period_unit = kwargs.get("period_unit", "")
+        self.description = kwargs.get("description", "")
+        self.category = kwargs.get("category", "")
+
+    def update(self):
+        pass
+
+    def get_depenendcies(self):
+        pass
 
 
-class Path(WebsitePost):
-    """Web site post."""
+class ProfessionalPath(WebsitePost):
+    """Web site path."""
 
-    def __init__(self, base_url: str = "") -> None:
-        super().__init__(base_url)
-        self.website = base_url
+    def __init__(self, parent: Optional[OpenClassrooms] = None, **kwargs) -> None:
+        super().__init__(parent=parent, **kwargs)
+        self.type = WebsitePost.PostType.PATH
 
 
 class Course(WebsitePost):
-    """Web site post."""
+    """Web site course."""
 
-    def __init__(self, base_url: str = "") -> None:
-        super().__init__(base_url)
-        self.website = base_url
+    def __init__(self, parent: Optional[OpenClassrooms] = None, **kwargs) -> None:
+        super().__init__(parent=parent, **kwargs)
+        self.type = WebsitePost.PostType.COURSE
 
+    def update(self):
+        super().update()
 
-def import_source_content_dependency(driver, content_url):
+        dependency_dct = {"objective_lst": [], "dependency_lst": []}
 
-    dependency_dct = {"objective_lst": [], "dependency_lst": []}
+        driver = self.parent._open_driver()
+        driver.get(self.url)
 
-    logger.debug("update data for url {}".format(content_url))
-
-    driver.get(content_url)
-    handle = driver.current_window_handle
-    logger.debug(
-        "Handle: {}, Title: {}, URL: {}".format(
-            handle, driver.title, driver.current_url
+        # Get list of paths / courses
+        asides = WebDriverWait(driver, timeout=self.parent.TIMEOUT_DEFAULT_S).until(
+            lambda d: d.find_elements(By.TAG_NAME, "aside")
         )
-    )
 
-    # Get list of paths / courses
-    asides = WebDriverWait(driver, timeout=SEARCH_TIMEOUT_S).until(
-        lambda d: d.find_elements_by_tag_name("aside")
-    )
+        for aside_item in asides:
 
-    for aside_item in asides:
+            attribute_item = aside_item.get_attribute("data-claire-semantic")
+            if attribute_item:
 
-        attribute_item = aside_item.get_attribute("data-claire-semantic")
-        if attribute_item:
+                if "information" in attribute_item:
 
-            if "information" in attribute_item:
+                    items = aside_item.find_elements(By.TAG_NAME, "li")
+                    for item_idx, item in enumerate(items):
+                        txt = item.find_element(By.TAG_NAME, "p").text.rstrip(" .,;")
+                        print(f"Objective #{item_idx}: {txt}")
+                        dependency_dct["objective_lst"].append(txt)
 
-                items = aside_item.find_elements_by_tag_name("li")
-                for item_idx, item in enumerate(items):
-                    txt = item.find_element_by_tag_name("p").text.rstrip(" .,;")
-                    logger.debug("Objective #{}: {}".format(item_idx, txt))
-                    dependency_dct["objective_lst"].append(txt)
+        # __get_content_dependency(self.url, aside_item, dependency_dct)
+        # logger.debug(dependency_dct)
 
-                __get_content_dependency(content_url, aside_item, dependency_dct)
-                # logger.debug(dependency_dct)
+        self.parent._close_driver(driver)
 
-            if "warning" in attribute_item:
-
-                __get_content_dependency(content_url, aside_item, dependency_dct)
-                # logger.debug(dependency_dct)
-
-    return dependency_dct
+        # return dependency_dct
 
 
 def __get_content_dependency(content_url, element, dependency_dct):
